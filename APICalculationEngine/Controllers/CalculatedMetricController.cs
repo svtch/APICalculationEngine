@@ -14,8 +14,10 @@ namespace APICalculationEngine.Controllers
 {
     public class CalculatedMetricController : ApiController
     {
-        MySqlConnection connection;
-        private string BDDChain = Properties.Settings.Default.BDDChain;
+        public Boolean IsTest = true;
+        public MySqlConnection connection;
+        public string BDDChain = Properties.Settings.Default.BDDChain;
+        List<CalculatedMetric> list_calc;
 
         // GET: api/CalculatedMetric
         public IEnumerable<string> Get()
@@ -25,39 +27,21 @@ namespace APICalculationEngine.Controllers
 
         // GET: api/CalculatedMetric/5
         //string macaddress, DateTime dateDebut, DateTime dateFin, int calculationtype, string step
-        public List<CalculatedMetric> Get(int calculationtype, string step)
+        public List<CalculatedMetric> Get(string macaddress, DateTime dateDebut, DateTime dateFin, int calculationtype, string step)
         {
-            List<CalculatedMetric> list_calc = new List<CalculatedMetric>();
-            /*RequestGenerator rg = new RequestGenerator();
-            try
+            CalculGestion cg = new CalculGestion();
+            if (IsTest)
             {
-                connection = new MySqlConnection(BDDChain);
-                connection.Open();
-            }
-            catch (Exception e)
-            {
-                throw e;
-            }
-            try
-            {
-                MySqlCommand command = connection.CreateCommand();
-                command.CommandText = rg.buildSelectRequest(macaddress, dateDebut, dateFin, calculationtype);
-                MySqlDataReader reader;
-                reader = command.ExecuteReader();
-                while (reader.Read())
-                {
-                    CalculatedMetric cm = new CalculatedMetric();
-                    cm.DateEnd = DateTime.ParseExact(reader["DateEnd"].ToString(), "yyyy-MM-dd HH:mm tt", null);
-                    cm.DateStart = DateTime.ParseExact(reader["DateStart"].ToString(), "yyyy-MM-dd HH:mm tt", null);
-                    cm.Devicemacaddress = reader["Devicemacaddress"].ToString();
-                    cm.Metric_Calculation_Type_ID = Convert.ToInt32(reader["Metric_Calculation_Type_ID"].ToString());
-                    cm.Calculated_Metric_Value = reader["Calculated_Metric_Value"].ToString();
-                    list_calc.Add(cm);
-                }
-                connection.Close();*/
                 DataGenerator dg = new DataGenerator(15000);
-            list_calc = dg.list;
-                CalculGestion cg = new CalculGestion();
+                list_calc = dg.list;
+                return cg.getRealCalculatedMetrics(list_calc, step, DateTime.Now, MethodesGlobales.GoodDateAdd(DateTime.Now, 50), calculationtype);
+            }
+            else
+            {
+                GetDataFromDB(macaddress, dateDebut, dateFin, calculationtype);
+                return cg.getRealCalculatedMetrics(list_calc, step, dateDebut, dateFin, calculationtype);
+            }
+   
             /*list_calc.Add(new CalculatedMetric
             {
                 Calculated_Metric_Value = "25",
@@ -65,16 +49,8 @@ namespace APICalculationEngine.Controllers
                 DateEnd = DateTime.Now.AddMinutes(7)
             }
                 );*/
-
-
-                return cg.getRealCalculatedMetrics(list_calc, step, DateTime.Now, MethodesGlobales.GoodDateAdd(DateTime.Now, 50), calculationtype); ;
-            //}
-            /*catch (Exception ex)
-            {
-                throw ex;
-            }*/
         }
-        
+
         // POST: api/CalculatedMetric
         public void Post([FromBody]string value)
         {
@@ -89,5 +65,47 @@ namespace APICalculationEngine.Controllers
         public void Delete(int id)
         {
         }
+        public Boolean DBConnexion()
+        {
+            try
+            {
+                connection = new MySqlConnection(BDDChain);
+                connection.Open();
+                return true;
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        public void GetDataFromDB(string macaddress, DateTime dateDebut, DateTime dateFin, int calculationtype)
+        {
+            DBConnexion();
+            try
+            {
+                RequestGenerator rg = new RequestGenerator();
+                MySqlCommand command = connection.CreateCommand();
+                command.CommandText = rg.buildSelectRequest(macaddress, dateDebut, dateFin, calculationtype);
+                MySqlDataReader reader;
+                reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    CalculatedMetric cm = new CalculatedMetric();
+                    cm.DateEnd = DateTime.ParseExact(reader["DateEnd"].ToString(), "yyyy-MM-dd HH:mm tt", null);
+                    cm.DateStart = DateTime.ParseExact(reader["DateStart"].ToString(), "yyyy-MM-dd HH:mm tt", null);
+                    cm.Devicemacaddress = reader["Devicemacaddress"].ToString();
+                    cm.Metric_Calculation_Type_ID = Convert.ToInt32(reader["Metric_Calculation_Type_ID"].ToString());
+                    cm.Calculated_Metric_Value = reader["Calculated_Metric_Value"].ToString();
+                    list_calc.Add(cm);
+                }
+                connection.Close();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
     }
+
 }

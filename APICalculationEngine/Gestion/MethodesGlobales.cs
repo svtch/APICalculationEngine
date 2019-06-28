@@ -9,7 +9,7 @@ namespace APICalculationEngine.Gestion
     {
         public static DateTime GoodDateAdd(DateTime d, int nbtoadd)
         {
-            return d.AddDays(nbtoadd);
+            return d.AddMinutes(nbtoadd);
         }
     }
 }
